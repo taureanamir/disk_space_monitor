@@ -9,7 +9,7 @@ SLACK_WEBHOOK_URL = os.getenv("SLACK_WEBHOOK_URL")
 
 # Configuration
 CHECK_PATHS = ["/", "/media/labuser/extra_drive"]  # List of paths to check
-FREE_SPACE_THRESHOLD_GB = 1000  # Alert threshold in GB
+FREE_SPACE_THRESHOLD_GB = 500  # Alert threshold in GB
 
 def check_disk_space(path, threshold_gb):
     """
@@ -17,10 +17,12 @@ def check_disk_space(path, threshold_gb):
     """
     total, used, free = shutil.disk_usage(path)
     free_gb = free / (1024**3)  # Convert bytes to GB
+    used_gb = used / (1024**3)  # Convert bytes to GB
+    total_gb = total / (1024**3)  # Convert bytes to GB
     print(f"Checking disk space on path: {path}")
-    print(f"Total: {total/(1024**3):.2f} GB | Used: {used/(1024**3):.2f} GB | Free: {free_gb:.2f} GB")
+    print(f"Total: {total_gb:.2f} GB | Used: {used_gb:.2f} GB | Free: {free_gb:.2f} GB")
 
-    return free_gb < threshold_gb, free_gb
+    return free_gb < threshold_gb, free_gb, total_gb
 
 
 def send_slack_alert(message):
@@ -40,12 +42,11 @@ def send_slack_alert(message):
 
 def main():
     for check_path in CHECK_PATHS:
-        is_below_threshold, free_space = check_disk_space(check_path, FREE_SPACE_THRESHOLD_GB)
+        is_below_threshold, free_space, total = check_disk_space(check_path, FREE_SPACE_THRESHOLD_GB)
         if is_below_threshold:
             alert_message = (
                 f":warning: *Disk Space Alert!*\n"
-                f"Free disk space on `{check_path}` is below {FREE_SPACE_THRESHOLD_GB} GB.\n"
-                f"Current free space: {free_space:.2f} GB.\n"
+                f"Current free space on `{check_path}`: {free_space:.2f} GB of {total:.2f}GB, i.e. {free_space/total*100:.2f}%.\n"
                 "Please take necessary action to free up space or add additional storage."
             )
             send_slack_alert(alert_message)
